@@ -2,8 +2,13 @@
 
 import { FormEvent, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Check, Eye, EyeOff, Leaf, LockKeyhole, Mail, User } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Leaf, LockKeyhole, Mail, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import { api, dados } from '@/lib/api/client'
+import { ApiError } from '@/lib/api/erro'
+import { CHAVE_SESSAO, entrar } from '@/lib/auth/sessao'
 
 export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -12,7 +17,10 @@ export function RegisterPage() {
   const [submitted, setSubmitted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const router = useRouter()
+  const queryClient = useQueryClient()
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const name = String(form.get('name') ?? '').trim()
@@ -33,10 +41,29 @@ export function RegisterPage() {
     if (Object.keys(nextErrors).length > 0) return
 
     setIsLoading(true)
-    window.setTimeout(() => {
+    try {
+      await dados(api.POST('/api/v1/auth/registro', { body: { nome: name, email, senha: password } }))
+    } catch (erro) {
+      setIsLoading(false)
+      if (erro instanceof ApiError && erro.status === 409) {
+        setErrors({ email: 'Já existe uma conta com este e-mail.' })
+      } else if (erro instanceof ApiError && erro.status === 400 && Object.keys(erro.detalhes).length > 0) {
+        const campos: Record<string, string> = { nome: 'name', email: 'email', senha: 'password' }
+        setErrors(Object.fromEntries(Object.entries(erro.detalhes).map(([campo, mensagem]) => [campos[campo] ?? 'form', mensagem])))
+      } else {
+        setErrors({ form: erro instanceof Error ? erro.message : 'Não foi possível criar a conta.' })
+      }
+      return
+    }
+    // Conta criada: já entra na plataforma; se o login falhar, o usuário segue para a tela de login.
+    try {
+      const usuario = await entrar(email, password)
+      queryClient.setQueryData(CHAVE_SESSAO, usuario)
+      router.replace('/dashboard')
+    } catch {
       setIsLoading(false)
       setSubmitted(true)
-    }, 900)
+    }
   }
 
   return (
@@ -61,7 +88,8 @@ export function RegisterPage() {
             <Field label="Senha" htmlFor="password" error={errors.password}><LockKeyhole aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#66736b]" /><input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Crie uma senha" aria-invalid={Boolean(errors.password)} className={inputClass(Boolean(errors.password), true)} /><PasswordToggle visible={showPassword} onClick={() => setShowPassword((visible) => !visible)} /></Field>
             <Field label="Confirmar senha" htmlFor="confirmation" error={errors.confirmation}><LockKeyhole aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#66736b]" /><input id="confirmation" name="confirmation" type={showConfirmation ? 'text' : 'password'} autoComplete="new-password" placeholder="Digite novamente sua senha" aria-invalid={Boolean(errors.confirmation)} className={inputClass(Boolean(errors.confirmation), true)} /><PasswordToggle visible={showConfirmation} onClick={() => setShowConfirmation((visible) => !visible)} /></Field>
             <div className="flex flex-col gap-1"><label className="flex cursor-pointer items-start gap-2.5 text-sm leading-5 text-[#66736b]"><input type="checkbox" name="terms" className="mt-0.5 size-4 shrink-0 rounded border-[#dde5df] accent-[#0b5d3b]" /> <span>Li e concordo com os <a href="#termos" className="font-medium text-[#0b5d3b] underline-offset-4 hover:underline">Termos de Uso</a> e a <a href="#privacidade" className="font-medium text-[#0b5d3b] underline-offset-4 hover:underline">Política de Privacidade</a>.</span></label>{errors.terms && <p role="alert" className="text-xs text-red-700">{errors.terms}</p>}</div>
-            {submitted && <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700">Cadastro enviado com sucesso.</p>}
+            {errors.form && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{errors.form}</p>}
+            {submitted && <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700">Conta criada com sucesso. <Link href="/login" className="font-semibold underline">Entre na plataforma</Link>.</p>}
             <Button type="submit" disabled={isLoading} className="mt-1 h-12 w-full gap-2 rounded-lg bg-[#0b5d3b] text-sm font-semibold text-white shadow-sm hover:bg-[#06452c]">{isLoading ? <><span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> Criando conta...</> : <>Criar minha conta <ArrowRight data-icon="inline-end" /></>}</Button>
           </form>
           <p className="mt-7 text-center text-sm text-[#66736b]">Já possui uma conta? <Link href="/login" className="font-semibold text-[#0b5d3b] underline-offset-4 hover:underline">Entrar</Link></p>

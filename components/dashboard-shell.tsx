@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { sair, useSessao } from '@/lib/auth/sessao'
 import { AlertTriangle, Bell, CloudSun, Droplets, Gauge, Home, Leaf, Map, Menu, Settings, Sprout, Thermometer, X } from 'lucide-react'
 
 const nav = [
@@ -22,6 +24,18 @@ const nav = [
 export function DashboardShell({ title, subtitle, actions, children }: { title: string; subtitle: string; actions?: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { data: usuario } = useSessao()
+  const inicial = (usuario?.nome ?? '?').trim().charAt(0).toUpperCase()
+  const perfil = usuario?.perfil === 'ADMINISTRADOR' ? 'Administrador' : 'Agricultor'
+
+  async function handleLogout() {
+    await sair()
+    queryClient.clear()
+    router.replace('/login')
+  }
+
   return (
     <main suppressHydrationWarning className="min-h-screen bg-[#f8faf8] text-[#17201b]">
       <button aria-label="Abrir menu" className="fixed left-4 top-4 z-30 rounded-lg bg-[#0b5d3b] p-2 text-white lg:hidden" onClick={() => setOpen(true)}><Menu /></button>
@@ -33,12 +47,12 @@ export function DashboardShell({ title, subtitle, actions, children }: { title: 
             <Link key={label} href={href} onClick={() => setOpen(false)} aria-current={pathname === href ? 'page' : undefined} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${pathname === href ? 'bg-white text-[#0b5d3b]' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}><Icon className="size-4" />{label}</Link>
           ))}
         </nav>
-        <div className="absolute inset-x-5 bottom-5 border-t border-white/15 pt-4"><p className="font-medium">Matheus</p><p className="text-xs text-white/60">Administrador</p><Link href="/login" className="mt-3 inline-block text-sm text-white/70 hover:text-white">Sair</Link></div>
+        <div className="absolute inset-x-5 bottom-5 border-t border-white/15 pt-4"><p className="truncate font-medium">{usuario?.nome}</p><p className="text-xs text-white/60">{perfil}</p><button type="button" onClick={handleLogout} className="mt-3 inline-block text-sm text-white/70 hover:text-white">Sair</button></div>
       </aside>
       <section className="lg:pl-64">
         <header className="flex items-center justify-between gap-4 border-b border-[#dde5df] bg-white px-6 py-5 lg:px-10">
           <div className="pl-12 lg:pl-0"><h1 className="text-2xl font-semibold">{title}</h1><p className="text-sm text-[#66736b]">{subtitle}</p></div>
-          <div className="flex items-center gap-4">{actions}<button aria-label="Notificações" className="relative rounded-lg p-2 hover:bg-[#dff5e9]"><Bell className="size-5" /><span className="absolute right-1 top-1 size-2 rounded-full bg-[#dc2626]" /></button><div className="flex size-9 items-center justify-center rounded-full bg-[#dff5e9] font-semibold text-[#0b5d3b]">M</div></div>
+          <div className="flex items-center gap-4">{actions}<button aria-label="Notificações" className="relative rounded-lg p-2 hover:bg-[#dff5e9]"><Bell className="size-5" /><span className="absolute right-1 top-1 size-2 rounded-full bg-[#dc2626]" /></button><div className="flex size-9 items-center justify-center rounded-full bg-[#dff5e9] font-semibold text-[#0b5d3b]" aria-hidden="true">{inicial}</div></div>
         </header>
         <div className="p-6 lg:p-10">{children}</div>
       </section>

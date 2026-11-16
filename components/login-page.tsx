@@ -2,21 +2,39 @@
 
 import { FormEvent, useState } from 'react'
 import { ArrowRight, Eye, EyeOff, Leaf, LockKeyhole, Mail } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import { mensagemDeLogin } from '@/lib/api/erro'
+import { CHAVE_SESSAO, entrar } from '@/lib/auth/sessao'
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const router = useRouter()
+  const queryClient = useQueryClient()
+
+  /** Só aceita destinos internos (começam com uma única barra), para não virar redirecionamento aberto. */
+  function destinoSeguro(): string {
+    const proximo = new URLSearchParams(window.location.search).get('proximo')
+    return proximo && proximo.startsWith('/') && !proximo.startsWith('//') ? proximo : '/dashboard'
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = new FormData(event.currentTarget)
     setError('')
     setIsLoading(true)
-    window.setTimeout(() => {
+    try {
+      const usuario = await entrar(String(form.get('email') ?? '').trim(), String(form.get('password') ?? ''))
+      queryClient.setQueryData(CHAVE_SESSAO, usuario)
+      router.replace(destinoSeguro())
+    } catch (erro) {
+      setError(mensagemDeLogin(erro))
       setIsLoading(false)
-      setError('Não foi possível entrar. Verifique seus dados e tente novamente.')
-    }, 900)
+    }
   }
 
   return (
@@ -50,8 +68,7 @@ export function LoginPage() {
           <div className="mb-9"><p className="mb-3 text-sm font-semibold text-[#0b5d3b]">Bem-vindo de volta</p><h2 className="text-3xl font-semibold tracking-[-0.03em] text-[#17201b]">Acesse sua conta</h2><p className="mt-2 text-sm leading-6 text-[#66736b]">Entre para acompanhar sua operação agrícola.</p></div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
             <Field label="E-mail" htmlFor="email"><Mail aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#66736b]" /><input id="email" name="email" type="email" autoComplete="email" required placeholder="voce@empresa.com" className="h-12 w-full rounded-lg border border-[#dde5df] bg-white pl-10 pr-4 text-sm outline-none transition placeholder:text-[#66736b] focus:border-[#0b5d3b] focus:ring-4 focus:ring-[#0b5d3b]/10" /></Field>
-            <Field label="Senha" htmlFor="password" action={<a href="#forgot-password" className="text-xs font-semibold text-[#0b5d3b] underline-offset-4 hover:underline">Esqueceu a senha?</a>}><LockKeyhole aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#66736b]" /><input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required placeholder="Digite sua senha" className="h-12 w-full rounded-lg border border-[#dde5df] bg-white pl-10 pr-12 text-sm outline-none transition placeholder:text-[#66736b] focus:border-[#0b5d3b] focus:ring-4 focus:ring-[#0b5d3b]/10" /><button type="button" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-[#66736b] hover:bg-[#dff5e9] hover:text-[#0b5d3b]">{showPassword ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}</button></Field>
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-[#66736b]"><input type="checkbox" name="remember" className="size-4 rounded border-[#dde5df] accent-[#0b5d3b]" />Lembrar de mim neste dispositivo</label>
+            <Field label="Senha" htmlFor="password"><LockKeyhole aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#66736b]" /><input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required placeholder="Digite sua senha" className="h-12 w-full rounded-lg border border-[#dde5df] bg-white pl-10 pr-12 text-sm outline-none transition placeholder:text-[#66736b] focus:border-[#0b5d3b] focus:ring-4 focus:ring-[#0b5d3b]/10" /><button type="button" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-[#66736b] hover:bg-[#dff5e9] hover:text-[#0b5d3b]">{showPassword ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}</button></Field>
             {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}
             <Button type="submit" disabled={isLoading} className="h-12 w-full gap-2 rounded-lg bg-[#0b5d3b] text-sm font-semibold text-white shadow-sm hover:bg-[#06452c]">{isLoading ? <><span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> Entrando...</> : <>Entrar na plataforma <ArrowRight data-icon="inline-end" /></>}</Button>
           </form>
