@@ -1,0 +1,30 @@
+# v0 sandbox internal files
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.snowflake/
+.design-cache/
+.v0-trash/
+.vercel/
+
+# Dependências e build
+node_modules
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Variáveis de ambiente (só o .env.example é versionado)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+.pnpm-debug.log*
+
+# Sistema e editores
+.DS_Store
+.idea/
+.vscode/
