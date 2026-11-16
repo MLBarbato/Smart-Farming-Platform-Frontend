@@ -1,18 +1,24 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
-import { AlertTriangle, Gauge, Home, Leaf, MapPin, Plus, Search, Sprout, X } from 'lucide-react'
+import { useMemo, useState, type FormEvent } from 'react'
+import { AlertTriangle, Gauge, Home, Leaf, MapPin, Pencil, Plus, Search, Sprout, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DashboardShell } from '@/components/dashboard-shell'
+import { Dialog } from '@/components/ui/dialog'
+import { Entrada } from '@/components/ui/campos'
+import { AvisoDeErro, Carregando, ErroBloco, Vazio } from '@/components/ui/estados'
+import { MapaFazenda, SeletorPonto } from '@/components/mapa'
+import { ApiError } from '@/lib/api/erro'
+import { corDaCriticidade } from '@/lib/criticidade'
+import { useExcluirFazenda, useFazendas, useResumoGeral, useSalvarFazenda } from '@/lib/dados/fazendas'
+import { useMapa } from '@/lib/dados/talhoes'
+import type { FazendaResponse, ResumoGeralResponse } from '@/lib/dados/tipos'
+import { formatarCoordenada, formatarNumero, lerNumero } from '@/lib/formatacao'
+import { ehPoligono } from '@/lib/geo'
 
 type Status = 'Ativa' | 'Atenção' | 'Inativa'
-type Farm = { id: number; name: string; city: string; state: string; area: number; fields: number; sensors: number; sensorsOnline: number; alerts: number; crops: string[]; status: Status }
-
-const initialFarms: Farm[] = [
-  { id: 1, name: 'Fazenda Santa Maria', city: 'Rio Verde', state: 'GO', area: 1240, fields: 9, sensors: 64, sensorsOnline: 60, alerts: 3, crops: ['Soja', 'Milho'], status: 'Atenção' },
-  { id: 2, name: 'Fazenda Boa Esperança', city: 'Sorriso', state: 'MT', area: 860, fields: 6, sensors: 41, sensorsOnline: 41, alerts: 0, crops: ['Soja'], status: 'Ativa' },
-  { id: 3, name: 'Sítio Água Limpa', city: 'Patos de Minas', state: 'MG', area: 180, fields: 3, sensors: 23, sensorsOnline: 17, alerts: 1, crops: ['Café'], status: 'Ativa' },
-]
+type Cartao = ResumoGeralResponse['fazendas'] extends (infer C)[] | undefined ? C : never
+type Linha = { cartao: Cartao; fazenda?: FazendaResponse; status: Status }
 
 const statusStyle: Record<Status, string> = {
   Ativa: 'bg-[#dff5e9] text-[#0b5d3b]',
@@ -20,71 +26,115 @@ const statusStyle: Record<Status, string> = {
   Inativa: 'bg-[#f1f3f2] text-[#66736b]',
 }
 
-const nf = new Intl.NumberFormat('pt-BR')
+function statusDaFazenda(cartao: Cartao, fazenda?: FazendaResponse): Status {
+  if (fazenda && fazenda.ativa === false) return 'Inativa'
+  return (cartao.alertas?.abertos ?? 0) > 0 ? 'Atenção' : 'Ativa'
+}
 
 export function FarmsPage() {
-  const [farms, setFarms] = useState(initialFarms)
-  const [query, setQuery] = useState('')
+  const resumo = useResumoGeral()
+  const fazendas = useFazendas()
+  const excluir = useExcluirFazenda()
+  const [busca, setBusca] = useState('')
   const [status, setStatus] = useState<'Todas' | Status>('Todas')
-  const [modal, setModal] = useState(false)
+  const [editando, setEditando] = useState<FazendaResponse | 'nova' | null>(null)
+  const [visualizando, setVisualizando] = useState<Linha | null>(null)
+  const [excluindo, setExcluindo] = useState<Linha | null>(null)
 
-  const filtered = useMemo(() => farms.filter(f => (status === 'Todas' || f.status === status) && `${f.name} ${f.city} ${f.state}`.toLowerCase().includes(query.trim().toLowerCase())), [farms, query, status])
-  const totals = useMemo(() => ({
-    farms: farms.length,
-    area: farms.reduce((s, f) => s + f.area, 0),
-    fields: farms.reduce((s, f) => s + f.fields, 0),
-    sensors: farms.reduce((s, f) => s + f.sensors, 0),
-  }), [farms])
+  const linhas = useMemo<Linha[]>(() => {
+    const porId = new Map((fazendas.data ?? []).map(f => [f.id, f]))
+    return (resumo.data?.fazendas ?? []).map(cartao => {
+      const fazenda = porId.get(cartao.id)
+      return { cartao, fazenda, status: statusDaFazenda(cartao, fazenda) }
+    })
+  }, [resumo.data, fazendas.data])
 
-  function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const d = new FormData(event.currentTarget)
-    setFarms(prev => [...prev, {
-      id: Date.now(), name: String(d.get('name')).trim(), city: String(d.get('city')).trim(), state: String(d.get('state')).trim().toUpperCase(),
-      area: Number(d.get('area')) || 0, fields: 0, sensors: 0, sensorsOnline: 0, alerts: 0,
-      crops: String(d.get('crops')).split(',').map(c => c.trim()).filter(Boolean), status: 'Ativa',
-    }])
-    setModal(false)
+  const filtradas = linhas.filter(l =>
+    (status === 'Todas' || l.status === status) &&
+    `${l.cartao.nome} ${l.cartao.cidade ?? ''} ${l.cartao.estado ?? ''}`.toLowerCase().includes(busca.toLowerCase()),
+  )
+  const totais = resumo.data?.totais
+
+  async function confirmarExclusao() {
+    if (!excluindo?.cartao.id) return
+    try {
+      await excluir.mutateAsync(excluindo.cartao.id)
+      setExcluindo(null)
+    } catch {
+      /* a mensagem do erro aparece no diálogo */
+    }
   }
 
   return (
-    <DashboardShell title="Fazendas" subtitle="Gerencie as propriedades da sua operação agrícola." actions={<Button onClick={() => setModal(true)} className="hidden h-10 gap-2 rounded-lg bg-[#0b5d3b] px-4 text-sm font-semibold text-white hover:bg-[#06452c] sm:inline-flex"><Plus /> Nova fazenda</Button>}>
+    <DashboardShell
+      title="Fazendas"
+      subtitle="Gerencie suas propriedades rurais."
+      actions={<Button onClick={() => setEditando('nova')} className="h-10 gap-2 rounded-lg bg-[#0b5d3b] px-4 text-sm font-semibold text-white hover:bg-[#06452c]"><Plus className="size-4" />Nova fazenda</Button>}
+    >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {([['Fazendas', String(totals.farms), 'Propriedades cadastradas', Home], ['Área total', `${nf.format(totals.area)} ha`, 'Hectares sob gestão', Leaf], ['Talhões', String(totals.fields), 'Áreas monitoradas', Sprout], ['Sensores', String(totals.sensors), 'Dispositivos IoT', Gauge]] as const).map(([title, value, desc, Icon]) => (
-          <div key={title} className="rounded-xl border border-[#dde5df] bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><span className="text-sm text-[#66736b]">{title}</span><Icon className="size-5 text-[#0b5d3b]" /></div><p className="mt-3 text-3xl font-semibold">{value}</p><p className="mt-1 text-xs text-[#66736b]">{desc}</p></div>
+        {([
+          ['Fazendas', String(totais?.fazendas ?? '—'), 'Propriedades cadastradas', Home],
+          ['Área total', totais ? `${formatarNumero(totais.areaTotalHectares)} ha` : '—', 'Hectares sob gestão', Leaf],
+          ['Talhões', String(totais?.talhoes ?? '—'), 'Áreas cadastradas', Sprout],
+          ['Sensores ativos', totais ? `${totais.sensoresAtivos}/${totais.sensores}` : '—', 'Dispositivos em operação', Gauge],
+        ] as const).map(([titulo, valor, descricao, Icone]) => (
+          <div key={titulo} className="rounded-xl border border-[#dde5df] bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between"><span className="text-sm text-[#66736b]">{titulo}</span><Icone className="size-5 text-[#0b5d3b]" /></div>
+            <p className="mt-3 text-3xl font-semibold">{valor}</p><p className="mt-1 text-xs text-[#66736b]">{descricao}</p>
+          </div>
         ))}
       </div>
 
       <section className="mt-8">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-          <div><h2 className="text-lg font-semibold">Suas propriedades</h2><p className="text-sm text-[#66736b]">{filtered.length} de {farms.length} fazendas</p></div>
-          <div className="flex w-full flex-wrap gap-3 sm:w-auto">
-            <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none"><Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#66736b]" /><input value={query} onChange={e => setQuery(e.target.value)} aria-label="Buscar fazenda" placeholder="Buscar por nome ou cidade" className="h-10 w-full rounded-lg border border-[#dde5df] bg-white pl-9 pr-3 text-sm outline-none transition placeholder:text-[#66736b] focus:border-[#0b5d3b] focus:ring-4 focus:ring-[#0b5d3b]/10" /></div>
-            <select value={status} onChange={e => setStatus(e.target.value as 'Todas' | Status)} aria-label="Filtrar por status" className="h-10 rounded-lg border border-[#dde5df] bg-white px-3 text-sm outline-none focus:border-[#0b5d3b]"><option>Todas</option><option>Ativa</option><option>Atenção</option><option>Inativa</option></select>
-            <Button onClick={() => setModal(true)} className="h-10 gap-2 rounded-lg bg-[#0b5d3b] px-4 text-sm font-semibold text-white hover:bg-[#06452c] sm:hidden"><Plus /> Nova</Button>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="text-lg font-semibold">Suas propriedades</h2><p className="text-sm text-[#66736b]">{filtradas.length} de {linhas.length} fazendas</p></div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#66736b]" />
+              <input value={busca} onChange={e => setBusca(e.target.value)} aria-label="Buscar fazenda" placeholder="Buscar por nome ou cidade" className="h-10 w-full rounded-lg border border-[#dde5df] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#0b5d3b]" />
+            </div>
+            <select value={status} onChange={e => setStatus(e.target.value as 'Todas' | Status)} aria-label="Filtrar por status" className="h-10 rounded-lg border border-[#dde5df] bg-white px-3 text-sm outline-none focus:border-[#0b5d3b]">
+              <option value="Todas">Todos os status</option><option>Ativa</option><option>Atenção</option><option>Inativa</option>
+            </select>
           </div>
         </div>
 
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center rounded-xl border border-dashed border-[#dde5df] bg-white px-6 py-14 text-center"><div className="rounded-xl bg-[#dff5e9] p-3 text-[#0b5d3b]"><Leaf /></div><p className="mt-4 font-semibold">Nenhuma fazenda encontrada</p><p className="mt-1 text-sm text-[#66736b]">Ajuste a busca ou cadastre uma nova propriedade.</p></div>
+        {resumo.isPending || fazendas.isPending ? <Carregando texto="Carregando fazendas..." /> : resumo.isError || fazendas.isError ? (
+          <ErroBloco erro={resumo.error ?? fazendas.error} aoTentarDeNovo={() => { void resumo.refetch(); void fazendas.refetch() }} />
+        ) : linhas.length === 0 ? (
+          <Vazio titulo="Nenhuma fazenda cadastrada" texto="Cadastre sua primeira propriedade para começar a acompanhar talhões, sensores e alertas." acao={<Button onClick={() => setEditando('nova')} className="mt-2 h-10 rounded-lg bg-[#0b5d3b] px-4 text-sm font-semibold text-white hover:bg-[#06452c]">Nova fazenda</Button>} />
+        ) : filtradas.length === 0 ? (
+          <Vazio titulo="Nenhuma fazenda encontrada" texto="Ajuste a busca ou o filtro de status." />
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
-            {filtered.map(f => {
-              const pct = f.sensors ? Math.round((f.sensorsOnline / f.sensors) * 100) : 0
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filtradas.map(l => {
+              const { cartao: c } = l
+              const online = Math.max((c.sensoresAtivos ?? 0) - (c.sensoresSemLeituraRecente ?? 0), 0)
               return (
-                <article key={f.id} className="flex flex-col rounded-xl border border-[#dde5df] bg-white p-6 shadow-sm transition hover:border-[#0b5d3b]/40">
+                <article key={c.id} className="flex flex-col rounded-xl border border-[#dde5df] bg-white p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3"><div className="rounded-lg bg-[#dff5e9] p-2.5 text-[#0b5d3b]"><Leaf className="size-5" /></div><div className="min-w-0"><h3 className="truncate font-semibold">{f.name}</h3><p className="flex items-center gap-1 text-xs text-[#66736b]"><MapPin className="size-3" />{f.city} · {f.state}</p></div></div>
-                    <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${statusStyle[f.status]}`}>{f.status}</span>
+                    <div className="min-w-0"><h3 className="truncate font-semibold">{c.nome}</h3><p className="mt-1 flex items-center gap-1 text-xs text-[#66736b]"><MapPin className="size-3.5 shrink-0" />{[c.cidade, c.estado].filter(Boolean).join(' / ') || 'Localização não informada'}</p></div>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${statusStyle[l.status]}`}>{l.status}</span>
                   </div>
                   <div className="mt-6 grid grid-cols-3 gap-3 border-y border-[#dde5df] py-4 text-center">
-                    <div><p className="text-xl font-semibold">{nf.format(f.area)}</p><p className="text-xs text-[#66736b]">hectares</p></div>
-                    <div><p className="text-xl font-semibold">{f.fields}</p><p className="text-xs text-[#66736b]">talhões</p></div>
-                    <div><p className="text-xl font-semibold">{f.sensors}</p><p className="text-xs text-[#66736b]">sensores</p></div>
+                    <div><p className="text-xl font-semibold">{formatarNumero(c.areaTotal)}</p><p className="text-xs text-[#66736b]">hectares</p></div>
+                    <div><p className="text-xl font-semibold">{c.talhoes}</p><p className="text-xs text-[#66736b]">talhões</p></div>
+                    <div><p className="flex items-center justify-center gap-1 text-xl font-semibold">{(c.alertas?.abertos ?? 0) > 0 && <AlertTriangle aria-hidden="true" className="size-4" style={{ color: corDaCriticidade(c.alertas?.maiorCriticidade) }} />}{c.alertas?.abertos ?? 0}</p><p className="text-xs text-[#66736b]">alertas</p></div>
                   </div>
-                  <div className="mt-4"><div className="flex justify-between text-xs text-[#66736b]"><span>Sensores online</span><span className="font-medium text-[#17201b]">{f.sensorsOnline}/{f.sensors}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-[#d1d5db]" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Sensores online"><div className="h-full rounded-full bg-[#16a34a]" style={{ width: `${pct}%` }} /></div></div>
-                  <div className="mt-4 flex flex-wrap items-center gap-2">{f.crops.map(c => <span key={c} className="rounded-full bg-[#f8faf8] px-2.5 py-1 text-xs text-[#66736b] ring-1 ring-[#dde5df]">{c}</span>)}{f.alerts > 0 && <span className="ml-auto flex items-center gap-1 rounded-full bg-[#fff7ed] px-2 py-1 text-xs text-[#b45309]"><AlertTriangle className="size-3" />{f.alerts} {f.alerts === 1 ? 'alerta' : 'alertas'}</span>}</div>
-                  <button className="mt-5 self-start text-sm font-medium text-[#0b5d3b] hover:underline">Ver detalhes</button>
+                  <div className="mt-4">
+                    <div className="flex justify-between text-xs text-[#66736b]"><span>Sensores com leitura recente</span><span className="font-medium text-[#17201b]">{online}/{c.sensores}</span></div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#d1d5db]" role="progressbar" aria-valuenow={online} aria-valuemin={0} aria-valuemax={c.sensores || 1} aria-label="Sensores com leitura recente"><div className="h-full rounded-full bg-[#16a34a]" style={{ width: `${c.sensores ? (online / c.sensores) * 100 : 0}%` }} /></div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {(c.culturasEmCultivo ?? []).length === 0 ? <span className="text-xs text-[#66736b]">Sem plantio em cultivo</span> : c.culturasEmCultivo?.map(cultura => <span key={cultura} className="rounded-full bg-[#f8faf8] px-2.5 py-1 text-xs text-[#66736b] ring-1 ring-[#dde5df]">{cultura}</span>)}
+                  </div>
+                  <div className="mt-5 flex items-center justify-between gap-2 border-t border-[#dde5df] pt-4">
+                    <button onClick={() => setVisualizando(l)} className="flex items-center gap-1.5 text-sm font-medium text-[#0b5d3b] hover:underline"><MapPin className="size-4" />Ver no mapa</button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => l.fazenda && setEditando(l.fazenda)} disabled={!l.fazenda} aria-label={`Editar ${c.nome}`} className="rounded-lg p-2 text-[#66736b] hover:bg-[#f8faf8] disabled:opacity-40"><Pencil className="size-4" /></button>
+                      <button onClick={() => { excluir.reset(); setExcluindo(l) }} aria-label={`Excluir ${c.nome}`} className="rounded-lg p-2 text-[#66736b] hover:bg-red-50 hover:text-red-700"><Trash2 className="size-4" /></button>
+                    </div>
+                  </div>
                 </article>
               )
             })}
@@ -92,23 +142,140 @@ export function FarmsPage() {
         )}
       </section>
 
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="new-farm-title">
-          <button aria-label="Fechar" className="absolute inset-0 bg-black/30" onClick={() => setModal(false)} />
-          <form onSubmit={handleCreate} className="relative flex w-full max-w-md flex-col gap-4 rounded-xl border border-[#dde5df] bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between"><div><h2 id="new-farm-title" className="text-lg font-semibold">Nova fazenda</h2><p className="text-sm text-[#66736b]">Cadastre uma nova propriedade.</p></div><button type="button" aria-label="Fechar" onClick={() => setModal(false)} className="rounded-lg p-1.5 text-[#66736b] hover:bg-[#dff5e9] hover:text-[#0b5d3b]"><X className="size-4" /></button></div>
-            <Input label="Nome da fazenda" name="name" placeholder="Ex.: Fazenda Santa Maria" required />
-            <div className="grid grid-cols-[1fr_5rem] gap-3"><Input label="Cidade" name="city" placeholder="Rio Verde" required /><Input label="UF" name="state" placeholder="GO" maxLength={2} required /></div>
-            <Input label="Área total (ha)" name="area" type="number" min={1} placeholder="1000" required />
-            <Input label="Culturas (separadas por vírgula)" name="crops" placeholder="Soja, Milho" />
-            <div className="mt-2 flex justify-end gap-3"><Button type="button" variant="outline" onClick={() => setModal(false)} className="h-10 rounded-lg px-4">Cancelar</Button><Button type="submit" className="h-10 rounded-lg bg-[#0b5d3b] px-4 font-semibold text-white hover:bg-[#06452c]">Salvar fazenda</Button></div>
-          </form>
+      <FormularioFazenda fazenda={editando} aoFechar={() => setEditando(null)} />
+      <VisaoDaFazenda linha={visualizando} aoFechar={() => setVisualizando(null)} />
+
+      <Dialog aberto={!!excluindo} aoFechar={() => setExcluindo(null)} titulo="Excluir fazenda" descricao={excluindo?.cartao.nome}>
+        <div className="flex flex-col gap-4">
+          <p className="text-sm">Esta ação não pode ser desfeita. A previsão do tempo e a estação virtual da fazenda também serão removidas. Fazendas com talhões não podem ser excluídas: exclua os talhões antes.</p>
+          <AvisoDeErro erro={excluir.error} />
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setExcluindo(null)} className="h-10 rounded-lg px-4">Cancelar</Button>
+            <Button type="button" onClick={confirmarExclusao} disabled={excluir.isPending} className="h-10 rounded-lg bg-red-700 px-4 text-sm font-semibold text-white hover:bg-red-800">{excluir.isPending ? 'Excluindo...' : 'Excluir'}</Button>
+          </div>
         </div>
-      )}
+      </Dialog>
     </DashboardShell>
   )
 }
 
-function Input({ label, name, ...props }: { label: string; name: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return <div className="flex flex-col gap-2"><label htmlFor={name} className="text-sm font-medium">{label}</label><input id={name} name={name} {...props} className="h-11 w-full rounded-lg border border-[#dde5df] bg-white px-3 text-sm outline-none transition placeholder:text-[#66736b] focus:border-[#0b5d3b] focus:ring-4 focus:ring-[#0b5d3b]/10" /></div>
+function VisaoDaFazenda({ linha, aoFechar }: { linha: Linha | null; aoFechar: () => void }) {
+  const id = linha?.cartao.id
+  const mapa = useMapa(linha ? id : undefined)
+  const f = linha?.fazenda
+  const ponto: [number, number] | null = f?.latitude != null && f?.longitude != null ? [f.latitude, f.longitude] : null
+  const talhoes = (mapa.data?.talhoes ?? []).map(t => ({
+    id: t.id as number,
+    identificacao: t.identificacao ?? '',
+    geometria: ehPoligono(t.geometria) ? t.geometria : null,
+    cor: corDaCriticidade(t.alertas?.maiorCriticidade),
+    linhas: [`${formatarNumero(t.areaHectares)} ha`, t.plantioAtual ? `${t.plantioAtual.culturaNome} (${t.plantioAtual.status})` : 'Sem plantio em cultivo'],
+  }))
+  return (
+    <Dialog aberto={!!linha} aoFechar={aoFechar} titulo={linha?.cartao.nome ?? ''} descricao="Localização e talhões" largura="max-w-3xl">
+      {linha && (
+        <div className="flex flex-col gap-4">
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div><dt className="text-xs text-[#66736b]">Localização</dt><dd>{f?.localizacao || '—'}</dd></div>
+            <div><dt className="text-xs text-[#66736b]">Cidade / UF</dt><dd>{[f?.cidade, f?.estado].filter(Boolean).join(' / ') || '—'}</dd></div>
+            <div><dt className="text-xs text-[#66736b]">Coordenadas (latitude, longitude)</dt><dd>{ponto ? `${formatarCoordenada(f?.latitude)}; ${formatarCoordenada(f?.longitude)}` : 'Não informadas'}</dd></div>
+            <div><dt className="text-xs text-[#66736b]">Área total</dt><dd>{formatarNumero(f?.areaTotal)} ha</dd></div>
+          </dl>
+          {ponto || talhoes.some(t => t.geometria) ? <MapaFazenda ponto={ponto} talhoes={talhoes} className="h-96 w-full" /> : (
+            <p className="rounded-lg border border-dashed border-[#dde5df] p-6 text-center text-sm text-[#66736b]">Informe a latitude e a longitude da fazenda (e desenhe os talhões) para vê-la no mapa.</p>
+          )}
+        </div>
+      )}
+    </Dialog>
+  )
+}
+
+type Campos = { nome: string; localizacao: string; areaTotal: string; cidade: string; estado: string; latitude: string; longitude: string }
+const vazio: Campos = { nome: '', localizacao: '', areaTotal: '', cidade: '', estado: '', latitude: '', longitude: '' }
+
+function FormularioFazenda({ fazenda, aoFechar }: { fazenda: FazendaResponse | 'nova' | null; aoFechar: () => void }) {
+  return (
+    <Dialog aberto={fazenda !== null} aoFechar={aoFechar} titulo={fazenda === 'nova' ? 'Nova fazenda' : 'Editar fazenda'} descricao="A latitude e a longitude habilitam o mapa, a previsão do tempo e a estação virtual." largura="max-w-2xl">
+      {fazenda !== null && <CorpoFormulario key={fazenda === 'nova' ? 'nova' : fazenda.id} fazenda={fazenda} aoFechar={aoFechar} />}
+    </Dialog>
+  )
+}
+
+function CorpoFormulario({ fazenda, aoFechar }: { fazenda: FazendaResponse | 'nova'; aoFechar: () => void }) {
+  const salvar = useSalvarFazenda()
+  const edicao = fazenda !== 'nova'
+  const [campos, setCampos] = useState<Campos>(() => edicao ? {
+    nome: fazenda.nome ?? '', localizacao: fazenda.localizacao ?? '', areaTotal: fazenda.areaTotal != null ? String(fazenda.areaTotal).replace('.', ',') : '',
+    cidade: fazenda.cidade ?? '', estado: fazenda.estado ?? '', latitude: fazenda.latitude != null ? String(fazenda.latitude) : '', longitude: fazenda.longitude != null ? String(fazenda.longitude) : '',
+  } : vazio)
+  const [erros, setErros] = useState<Record<string, string>>({})
+
+  const lat = lerNumero(campos.latitude)
+  const lon = lerNumero(campos.longitude)
+  const ponto: [number, number] | null = lat !== undefined && lon !== undefined ? [lat, lon] : null
+  const definir = (campo: keyof Campos) => (e: { target: { value: string } }) => setCampos(c => ({ ...c, [campo]: e.target.value }))
+
+  function validar(): Record<string, string> {
+    const e: Record<string, string> = {}
+    const area = lerNumero(campos.areaTotal)
+    if (!campos.nome.trim()) e.nome = 'Informe o nome da fazenda.'
+    if (area === undefined || area <= 0) e.areaTotal = 'Informe uma área maior que zero.'
+    if (campos.estado && !/^[A-Za-z]{2}$/.test(campos.estado)) e.estado = 'Use a sigla da UF, com 2 letras.'
+    if ((campos.latitude.trim() === '') !== (campos.longitude.trim() === '')) e.longitude = 'Informe latitude e longitude juntas.'
+    else if (campos.latitude.trim() !== '') {
+      if (lat === undefined || lat < -90 || lat > 90) e.latitude = 'Latitude entre -90 e 90.'
+      if (lon === undefined || lon < -180 || lon > 180) e.longitude = 'Longitude entre -180 e 180.'
+    }
+    return e
+  }
+
+  async function enviar(evento: FormEvent) {
+    evento.preventDefault()
+    const encontrados = validar()
+    setErros(encontrados)
+    if (Object.keys(encontrados).length > 0) return
+    try {
+      await salvar.mutateAsync({
+        id: edicao ? fazenda.id : undefined,
+        corpo: {
+          nome: campos.nome.trim(), localizacao: campos.localizacao.trim() || undefined, areaTotal: lerNumero(campos.areaTotal)!,
+          cidade: campos.cidade.trim() || undefined, estado: campos.estado.trim().toUpperCase() || undefined,
+          latitude: lat, longitude: lon,
+        },
+      })
+      aoFechar()
+    } catch (erro) {
+      if (erro instanceof ApiError && Object.keys(erro.detalhes).length > 0) setErros(erro.detalhes)
+    }
+  }
+
+  const erroGeral = salvar.error instanceof ApiError && Object.keys(salvar.error.detalhes).length > 0 ? null : salvar.error
+  return (
+    <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
+      <Entrada id="nome" rotulo="Nome da fazenda" value={campos.nome} onChange={definir('nome')} erro={erros.nome} placeholder="Ex.: Fazenda Santa Maria" maxLength={150} required />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Entrada id="areaTotal" rotulo="Área total (ha)" inputMode="decimal" value={campos.areaTotal} onChange={definir('areaTotal')} erro={erros.areaTotal} placeholder="1240" required />
+        <Entrada id="localizacao" rotulo="Localização (opcional)" value={campos.localizacao} onChange={definir('localizacao')} erro={erros.localizacao} placeholder="Zona rural de Rio Verde" maxLength={255} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-[1fr_6rem]">
+        <Entrada id="cidade" rotulo="Cidade" value={campos.cidade} onChange={definir('cidade')} erro={erros.cidade} placeholder="Rio Verde" maxLength={100} />
+        <Entrada id="estado" rotulo="UF" value={campos.estado} onChange={e => setCampos(c => ({ ...c, estado: e.target.value.toUpperCase() }))} erro={erros.estado} placeholder="GO" maxLength={2} />
+      </div>
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-1 text-sm font-medium">Localização no mapa</legend>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Entrada id="latitude" rotulo="Latitude" inputMode="decimal" value={campos.latitude} onChange={definir('latitude')} erro={erros.latitude} placeholder="-17.7923" />
+          <Entrada id="longitude" rotulo="Longitude" inputMode="decimal" value={campos.longitude} onChange={definir('longitude')} erro={erros.longitude} placeholder="-50.9192" />
+        </div>
+        <p className="text-xs text-[#66736b]">Clique no mapa para marcar a sede da fazenda, ou digite as coordenadas.</p>
+        <SeletorPonto valor={ponto} aoEscolher={(la, lo) => setCampos(c => ({ ...c, latitude: String(la), longitude: String(lo) }))} />
+        {ponto && <button type="button" onClick={() => setCampos(c => ({ ...c, latitude: '', longitude: '' }))} className="self-start text-xs font-medium text-[#0b5d3b] hover:underline">Limpar localização</button>}
+      </fieldset>
+      <AvisoDeErro erro={erroGeral} />
+      <div className="flex justify-end gap-3">
+        <Button type="button" variant="outline" onClick={aoFechar} className="h-10 rounded-lg px-4">Cancelar</Button>
+        <Button type="submit" disabled={salvar.isPending} className="h-10 rounded-lg bg-[#0b5d3b] px-4 text-sm font-semibold text-white hover:bg-[#06452c]">{salvar.isPending ? 'Salvando...' : edicao ? 'Salvar alterações' : 'Criar fazenda'}</Button>
+      </div>
+    </form>
+  )
 }
