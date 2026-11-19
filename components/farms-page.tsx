@@ -91,7 +91,7 @@ export function FarmsPage() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
               <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#66736b]" />
-              <input value={busca} onChange={e => setBusca(e.target.value)} aria-label="Buscar fazenda" placeholder="Buscar por nome ou cidade" className="h-10 w-full rounded-lg border border-[#dde5df] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#0b5d3b]" />
+              <input autoComplete="off" value={busca} onChange={e => setBusca(e.target.value)} aria-label="Buscar fazenda" placeholder="Buscar por nome ou cidade" className="h-10 w-full rounded-lg border border-[#dde5df] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#0b5d3b]" />
             </div>
             <select value={status} onChange={e => setStatus(e.target.value as 'Todas' | Status)} aria-label="Filtrar por status" className="h-10 rounded-lg border border-[#dde5df] bg-white px-3 text-sm outline-none focus:border-[#0b5d3b]">
               <option value="Todas">Todos os status</option><option>Ativa</option><option>Atenção</option><option>Inativa</option>
@@ -251,7 +251,7 @@ function CorpoFormulario({ fazenda, aoFechar }: { fazenda: FazendaResponse | 'no
 
   const erroGeral = salvar.error instanceof ApiError && Object.keys(salvar.error.detalhes).length > 0 ? null : salvar.error
   return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
+    <form autoComplete="off" onSubmit={enviar} noValidate className="flex flex-col gap-4">
       <Entrada id="nome" rotulo="Nome da fazenda" value={campos.nome} onChange={definir('nome')} erro={erros.nome} placeholder="Ex.: Fazenda Santa Maria" maxLength={150} required />
       <div className="grid gap-4 sm:grid-cols-2">
         <Entrada id="areaTotal" rotulo="Área total (ha)" inputMode="decimal" value={campos.areaTotal} onChange={definir('areaTotal')} erro={erros.areaTotal} placeholder="1240" required />

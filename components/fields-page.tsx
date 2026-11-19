@@ -210,7 +210,7 @@ function FormularioTalhao({ fazendaId, talhao, outros, ponto, aoFechar }: { faze
 
   const erroGeral = salvar.error instanceof ApiError && Object.keys(salvar.error.detalhes).length > 0 ? null : salvar.error
   return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
+    <form autoComplete="off" onSubmit={enviar} noValidate className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <Entrada id="identificacao" rotulo="Identificação" value={identificacao} onChange={e => setIdentificacao(e.target.value)} erro={erros.identificacao} placeholder="Ex.: Talhão 01" maxLength={100} required />
         <Entrada id="areaHectares" rotulo="Área (ha)" inputMode="decimal" value={area} onChange={e => { setArea(e.target.value); setAreaAutomatica(false) }} erro={erros.areaHectares} placeholder="48,75" required
