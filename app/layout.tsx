@@ -5,28 +5,13 @@ import { Providers } from '@/components/providers'
 export const metadata: Metadata = {
   title: 'Smart Farming Platform | Acesso',
   description: 'Acesse sua plataforma de gestão agrícola inteligente.',
-  generator: 'v0.app',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: '/icon.svg',
   },
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light dark',
+  colorScheme: 'light',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#f7faf8' },
     { media: '(prefers-color-scheme: dark)', color: '#f7faf8' },
