@@ -60,7 +60,7 @@ export function LoginPage() {
           <p className="mt-6 max-w-lg text-[1.05rem] leading-7 text-emerald-50/90">Monitore cada área da sua operação, antecipe necessidades e transforme dados em produtividade — tudo em um só lugar.</p>
         </div>
 
-        <div className="relative z-10 flex items-center justify-between px-10 pb-8 text-xs text-emerald-50/80 xl:px-16"><span></span></div>
+        <div className="relative z-10 flex items-center px-10 pb-8 text-xs text-emerald-50/80 xl:px-16"><span>© 2026 Smart Farming Platform.</span></div>
       </section>
 
       <section className="flex min-h-screen flex-col bg-[#f8faf8] px-6 py-8 sm:px-10 lg:justify-center lg:px-16 xl:px-24">

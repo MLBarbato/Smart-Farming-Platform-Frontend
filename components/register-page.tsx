@@ -75,7 +75,7 @@ export function RegisterPage() {
         <div aria-hidden="true" className="absolute inset-0 opacity-50 [background-image:linear-gradient(90deg,transparent_49%,rgba(223,245,233,0.18)_50%,transparent_51%),linear-gradient(0deg,transparent_49%,rgba(223,245,233,0.18)_50%,transparent_51%)] [background-size:72px_72px]" />
         <div className="relative z-10 flex items-center gap-3 px-10 py-9 xl:px-16"><span className="flex size-10 items-center justify-center rounded-lg bg-[#dff5e9] text-[#0b5d3b]"><Leaf aria-hidden="true" className="size-5 fill-current" /></span><span className="text-lg font-semibold tracking-tight">Smart Farming</span></div>
         <div className="relative z-10 my-auto max-w-2xl px-10 py-16 xl:px-16"><p className="mb-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200"><span className="size-1.5 rounded-full bg-emerald-300" /> Agricultura orientada por dados</p><h1 className="max-w-xl text-4xl font-semibold leading-[1.06] tracking-[-0.035em] xl:text-[3.35rem]">Dados precisos para decisões que fazem sua lavoura crescer.</h1><p className="mt-6 max-w-lg text-[1.05rem] leading-7 text-emerald-50/90">Monitore cada área da sua operação, antecipe necessidades e transforme dados em produtividade — tudo em um só lugar.</p></div>
-        <div className="relative z-10 flex items-center px-10 pb-8 text-xs text-emerald-50/80 xl:px-16"><span>© 2024 Smart Farming Platform. Todos os direitos reservados.</span></div>
+        <div className="relative z-10 flex items-center px-10 pb-8 text-xs text-emerald-50/80 xl:px-16"><span>© 2026 Smart Farming Platform.</span></div>
       </section>
 
       <section className="flex min-h-screen flex-col bg-[#f8faf8] px-6 py-8 sm:px-10 lg:justify-center lg:px-16 xl:px-24">
@@ -94,7 +94,7 @@ export function RegisterPage() {
           </form>
           <p className="mt-7 text-center text-sm text-[#66736b]">Já possui uma conta? <Link href="/login" className="font-semibold text-[#0b5d3b] underline-offset-4 hover:underline">Entrar</Link></p>
         </div>
-        <p className="mx-auto mt-8 w-full max-w-md text-center text-xs text-[#66736b] lg:mt-10">© 2024 Smart Farming Platform. Todos os direitos reservados.</p>
+        <p className="mx-auto mt-8 w-full max-w-md text-center text-xs text-[#66736b] lg:mt-10">© 2026 Smart Farming Platform.</p>
       </section>
     </main>
   )
