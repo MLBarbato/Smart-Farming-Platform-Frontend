@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatarCoordenada, formatarData, formatarNumero, lerNumero } from './formatacao'
+import { formatarCoordenada, formatarData, formatarDataHora, formatarNumero, lerNumero, rotuloMediaUmidade } from './formatacao'
 
 describe('lerNumero', () => {
   it('lê o formato brasileiro e o simples', () => {
@@ -36,5 +36,21 @@ describe('formatação', () => {
   it('formata coordenadas com 5 casas e vírgula', () => {
     expect(formatarCoordenada(-17.79234)).toBe('-17,79234')
     expect(formatarCoordenada(undefined)).toBe('—')
+  })
+})
+
+describe('formatarDataHora', () => {
+  it('usa o horário de Brasília, não o do navegador', () => {
+    expect(formatarDataHora('2026-11-19T12:42:37Z')).toBe('19/11/2026 09:42')
+    expect(formatarDataHora('2026-11-19T02:05:00Z')).toBe('18/11/2026 23:05')
+    expect(formatarDataHora(undefined)).toBe('—')
+  })
+})
+
+describe('rotuloMediaUmidade', () => {
+  it('lê a janela da justificativa e tem alternativa', () => {
+    expect(rotuloMediaUmidade('Solo adequado: umidade de 43,8 % (média das últimas 3 h, sensor do talhão), acima...')).toBe('média de 3 h')
+    expect(rotuloMediaUmidade('sem janela')).toBe('média recente')
+    expect(rotuloMediaUmidade(undefined)).toBe('média recente')
   })
 })

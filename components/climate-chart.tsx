@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { LineChart, Table2 } from 'lucide-react'
 import { fmtTick, niceTicks } from '@/components/monitoring-chart'
-import { fmtDay, weekday } from '@/lib/climate-data'
+import { diaDaSemana as weekday, diaMes as fmtDay } from '@/lib/clima'
 
 const W = 640, H = 240, M = { l: 48, r: 16, t: 16, b: 28 }
 
@@ -67,7 +67,7 @@ export function ClimateChart({ kind, title, subtitle, unit, dates, series, decim
             {hover !== null && (kind === 'bar' ? <rect x={x(hover) - band / 2} y={M.t} width={band} height={ih} fill="#0b5d3b" opacity="0.06" /> : <line x1={x(hover)} x2={x(hover)} y1={M.t} y2={H - M.b} stroke="#66736b" strokeWidth="1" />)}
             {kind === 'bar'
               ? series[0].values.map((v, i) => <path key={i} d={barPath(i, v)} fill={series[0].color} opacity={hover === null || hover === i ? 1 : 0.55} />)
-              : series.map(s => <g key={s.label}><polyline fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" points={s.values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')} /><circle cx={x(n - 1)} cy={y(s.values[n - 1])} r="4" fill={s.color} stroke="#fff" strokeWidth="2" />{hover !== null && <circle cx={x(hover)} cy={y(s.values[hover])} r="4" fill={s.color} stroke="#fff" strokeWidth="2" />}</g>)}
+              : series.map(s => <g key={s.label}><polyline fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" points={s.values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')} />{s.values.map((v, i) => i < n - 1 && <circle key={i} cx={x(i)} cy={y(v)} r="2.5" fill={s.color} />)}<circle cx={x(n - 1)} cy={y(s.values[n - 1])} r="4" fill={s.color} stroke="#fff" strokeWidth="2" />{hover !== null && <circle cx={x(hover)} cy={y(s.values[hover])} r="4" fill={s.color} stroke="#fff" strokeWidth="2" />}</g>)}
           </svg>
           {hover !== null && (
             <div role="status" className="pointer-events-none absolute top-2 z-10 min-w-36 rounded-lg border border-[#dde5df] bg-white p-3 text-xs shadow-lg" style={{ left: `${tipPct}%`, transform: tipPct > 55 ? 'translateX(calc(-100% - 12px))' : 'translateX(12px)' }}>
