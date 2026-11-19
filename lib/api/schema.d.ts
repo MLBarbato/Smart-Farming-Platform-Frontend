@@ -824,6 +824,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fazendas/{fazendaId}/relatorios/{tipo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exportar relatório em CSV
+         * @description Gera o arquivo do tipo pedido para o período [de, ate] (datas locais de Brasília, as duas incluídas; padrão: os últimos 30 dias; no máximo 366 dias). Tipos: IRRIGACAO (recomendações calculadas no período), CLIMA (leituras horárias da estação virtual), SENSORES (resumo por sensor dos talhões), ALERTAS (alertas abertos no período, com o atendimento) e PRODUTIVIDADE (plantios que ocuparam o período, com colheita e kg/ha). O arquivo vem como anexo (Content-Disposition).
+         */
+        get: operations["exportarRelatorio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fazendas/{fazendaId}/recomendacoes-irrigacao": {
         parameters: {
             query?: never;
@@ -1201,15 +1221,10 @@ export interface components {
             float?: boolean;
             container?: boolean;
             number?: boolean;
-            binary?: boolean;
             missingNode?: boolean;
-            floatingPointNumber?: boolean;
-            valueNode?: boolean;
-            /** @enum {string} */
-            nodeType?: "ARRAY" | "BINARY" | "BOOLEAN" | "MISSING" | "NULL" | "NUMBER" | "OBJECT" | "POJO" | "STRING";
-            object?: boolean;
             pojo?: boolean;
             integralNumber?: boolean;
+            floatingPointNumber?: boolean;
             short?: boolean;
             int?: boolean;
             long?: boolean;
@@ -1219,6 +1234,11 @@ export interface components {
             /** @deprecated */
             textual?: boolean;
             boolean?: boolean;
+            binary?: boolean;
+            valueNode?: boolean;
+            /** @enum {string} */
+            nodeType?: "ARRAY" | "BINARY" | "BOOLEAN" | "MISSING" | "NULL" | "NUMBER" | "OBJECT" | "POJO" | "STRING";
+            object?: boolean;
             embeddedValue?: boolean;
         };
         /**
@@ -5537,6 +5557,72 @@ export interface operations {
                 };
             };
             /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    exportarRelatorio: {
+        parameters: {
+            query?: {
+                /** @description Primeiro dia do período (AAAA-MM-DD, horário de Brasília); padrão: 29 dias antes do fim */
+                de?: string;
+                /** @description Último dia do período, incluído (AAAA-MM-DD, horário de Brasília); padrão: hoje */
+                ate?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Identificador da fazenda */
+                fazendaId: number;
+                /** @description Tipo de relatório: IRRIGACAO, CLIMA, SENSORES, ALERTAS ou PRODUTIVIDADE */
+                tipo: "IRRIGACAO" | "CLIMA" | "SENSORES" | "ALERTAS" | "PRODUTIVIDADE";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+            /** @description Dados ou filtros inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Sem token válido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Sem permissão para este recurso */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Fazenda não encontrada ou, no relatório de clima, fazenda sem estação virtual */
             404: {
                 headers: {
                     [name: string]: unknown;
