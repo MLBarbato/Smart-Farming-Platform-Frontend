@@ -1,12 +1,11 @@
 # Smart Farming Platform — Frontend
 
 Interface web da plataforma de agricultura de precisão (Next.js 16, React 19, TypeScript e Tailwind 4). Consome a
-API REST do backend: [Smart-Farming-Platform](https://github.com/mLeonelZ/Smart-Farming-Platform).
+API REST do backend: [Smart-Farming-Platform](https://github.com/MLBarbato/Smart-Farming-Platform).
 
-> **Estado atual:** integrados à API: **login, cadastro, sessão, Fazendas, Talhões (com mapa e desenho de
-> polígonos), Plantios e Configurações**. As demais telas (Dashboard, Sensores, Monitoramento, Clima, Irrigação,
-> Alertas e Relatórios) ainda usam dados fictícios (`lib/*-data.ts`) e serão ligadas conforme o plano em
-> `docs/analise-frontend.md` do repositório do backend.
+Todas as telas estão integradas à API: login, cadastro, sessão, Dashboard, Fazendas, Talhões (com mapa e desenho
+de polígonos), Plantios, Sensores, Monitoramento, Clima, Irrigação, Alertas, Relatórios (exportação em CSV) e
+Configurações.
 
 ## Requisitos
 
@@ -66,5 +65,5 @@ const alertas = await dados(api.GET('/api/v1/alertas', { params: { query: { stat
 
 ## Telas
 
-Login, cadastro, fazendas, talhões, plantios e configurações (integrados); dashboard, sensores, monitoramento,
-clima, irrigação, alertas e relatórios (ainda com dados fictícios) (rotas em `app/`, componentes em `components/`).
+Login, cadastro, dashboard, fazendas, talhões, plantios, sensores, monitoramento, clima, irrigação, alertas,
+relatórios e configurações (rotas em `app/`, componentes em `components/`).

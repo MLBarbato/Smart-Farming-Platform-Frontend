@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react'
 import { ArrowRight, Eye, EyeOff, Leaf, LockKeyhole, Mail } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
@@ -59,7 +60,7 @@ export function LoginPage() {
           <p className="mt-6 max-w-lg text-[1.05rem] leading-7 text-emerald-50/90">Monitore cada área da sua operação, antecipe necessidades e transforme dados em produtividade — tudo em um só lugar.</p>
         </div>
 
-        <div className="relative z-10 flex items-center justify-between px-10 pb-8 text-xs text-emerald-50/80 xl:px-16"><span></span></div>
+        <div className="relative z-10 flex items-center px-10 pb-8 text-xs text-emerald-50/80 xl:px-16"><span>© 2026 Smart Farming Platform.</span></div>
       </section>
 
       <section className="flex min-h-screen flex-col bg-[#f8faf8] px-6 py-8 sm:px-10 lg:justify-center lg:px-16 xl:px-24">
@@ -72,6 +73,7 @@ export function LoginPage() {
             {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}
             <Button type="submit" disabled={isLoading} className="h-12 w-full gap-2 rounded-lg bg-[#0b5d3b] text-sm font-semibold text-white shadow-sm hover:bg-[#06452c]">{isLoading ? <><span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> Entrando...</> : <>Entrar na plataforma <ArrowRight data-icon="inline-end" /></>}</Button>
           </form>
+          <p className="mt-7 text-center text-sm text-[#66736b]">Ainda não tem uma conta? <Link href="/cadastro" className="font-semibold text-[#0b5d3b] underline-offset-4 hover:underline">Cadastre-se</Link></p>
         </div>
         <p className="mx-auto mt-8 w-full max-w-md text-center text-xs text-[#66736b] lg:mt-12">© 2026 Smart Farming Platform.</p>
       </section>

@@ -16,6 +16,31 @@ function AjustarLimites({ limites }: { limites?: LatLngBoundsExpression | null }
   return null
 }
 
+/**
+ * O Leaflet mede o contêiner uma vez, ao nascer. Se o tamanho muda depois (diálogo que acaba de abrir, fonte e
+ * layout carregando, janela redimensionada), ele continua com a medida antiga e só parte dos tiles aparece, o resto
+ * em cinza. Aqui o mapa é remedido sempre que o contêiner muda de tamanho.
+ */
+function AcompanharTamanho() {
+  const mapa = useMap()
+  useEffect(() => {
+    const conteiner = mapa.getContainer()
+    let quadro = 0
+    const remedir = () => {
+      cancelAnimationFrame(quadro)
+      quadro = requestAnimationFrame(() => mapa.invalidateSize({ pan: false }))
+    }
+    const observador = new ResizeObserver(remedir)
+    observador.observe(conteiner)
+    remedir()
+    return () => {
+      observador.disconnect()
+      cancelAnimationFrame(quadro)
+    }
+  }, [mapa])
+  return null
+}
+
 /** Mapa OpenStreetMap (a atribuição é exigida pela licença dos tiles). */
 export function MapaBase({
   centro,
@@ -36,6 +61,7 @@ export function MapaBase({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <AcompanharTamanho />
       <AjustarLimites limites={limites} />
       {children}
     </MapContainer>

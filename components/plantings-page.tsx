@@ -227,7 +227,7 @@ function FormularioPlantio({ fazendaId, plantio, talhoes, culturas, aoFechar }: 
   }
   const erroGeral = salvar.error instanceof ApiError && Object.keys(salvar.error.detalhes).length > 0 ? null : salvar.error
   return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
+    <form autoComplete="off" onSubmit={enviar} noValidate className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <Selecao id="talhaoId" rotulo="Talhão" value={campos.talhaoId} onChange={definir('talhaoId')} opcoes={talhoes} placeholder="Selecione o talhão" erro={erros.talhaoId} disabled={edicao} />
         <Selecao id="culturaId" rotulo="Cultura" value={campos.culturaId} onChange={definir('culturaId')} opcoes={culturas} placeholder="Selecione a cultura" erro={erros.culturaId} disabled={culturaBloqueada} ajuda="Catálogo mantido pelo administrador." />
@@ -240,7 +240,7 @@ function FormularioPlantio({ fazendaId, plantio, talhoes, culturas, aoFechar }: 
         <Entrada id="safra" rotulo="Safra (opcional)" value={campos.safra} onChange={definir('safra')} erro={erros.safra} placeholder={safraSugerida || 'AAAA/AAAA'} ajuda={safraSugerida ? `Se vazia, usa ${safraSugerida} (o ano-safra começa em julho).` : undefined} />
         <div className="flex flex-col gap-1.5">
           <label htmlFor="tipoPlantio" className="text-sm font-medium">Tipo de plantio</label>
-          <input id="tipoPlantio" list="tipos-de-plantio" value={campos.tipoPlantio} onChange={definir('tipoPlantio')} maxLength={100} className="h-11 w-full rounded-lg border border-[#dde5df] bg-white px-3 text-sm outline-none focus:border-[#0b5d3b] focus:ring-4 focus:ring-[#0b5d3b]/10" />
+          <input id="tipoPlantio" autoComplete="off" list="tipos-de-plantio" value={campos.tipoPlantio} onChange={definir('tipoPlantio')} maxLength={100} className="h-11 w-full rounded-lg border border-[#dde5df] bg-white px-3 text-sm outline-none focus:border-[#0b5d3b] focus:ring-4 focus:ring-[#0b5d3b]/10" />
           <datalist id="tipos-de-plantio">{tiposDePlantio.map(t => <option key={t} value={t} />)}</datalist>
         </div>
       </div>
@@ -282,7 +282,7 @@ function FormularioColheita({ fazendaId, plantio, correcao, aoFechar }: { fazend
   }
   const erroGeral = mutacao.error instanceof ApiError && Object.keys(mutacao.error.detalhes).length > 0 ? null : mutacao.error
   return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
+    <form autoComplete="off" onSubmit={enviar} noValidate className="flex flex-col gap-4">
       <Entrada id="dataColheitaReal" rotulo="Data da colheita" type="date" value={data} onChange={e => setData(e.target.value)} erro={erros.dataColheitaReal} max={hojeIso()} required />
       <Entrada id="quantidadeColhidaKg" rotulo="Quantidade colhida (kg)" inputMode="decimal" value={quantidade} onChange={e => setQuantidade(e.target.value)} erro={erros.quantidadeColhidaKg} placeholder="54000" ajuda="Opcional. Com a quantidade, o sistema calcula a produtividade em kg/ha." />
       <AvisoDeErro erro={erroGeral} />

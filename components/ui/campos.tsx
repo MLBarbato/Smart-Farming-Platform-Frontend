@@ -36,7 +36,7 @@ export function Entrada({
 }: { rotulo: string; id: string; erro?: string; ajuda?: string } & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <Campo rotulo={rotulo} id={id} erro={erro} ajuda={ajuda}>
-      <input id={id} name={id} aria-invalid={erro ? true : undefined} aria-describedby={erro ? `${id}-erro` : ajuda ? `${id}-ajuda` : undefined} {...props} className={estiloEntrada} />
+      <input id={id} name={id} aria-invalid={erro ? true : undefined} aria-describedby={erro ? `${id}-erro` : ajuda ? `${id}-ajuda` : undefined} autoComplete="off" {...props} className={estiloEntrada} />
     </Campo>
   )
 }

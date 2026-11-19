@@ -55,7 +55,7 @@ function Perfil({ usuario }: { usuario: Usuario }) {
   }
   const erroGeral = atualizar.error instanceof ApiError && (atualizar.error.status === 409 || Object.keys(atualizar.error.detalhes).length > 0) ? null : atualizar.error
   return (
-    <form onSubmit={enviar} noValidate className={cartao}>
+    <form autoComplete="off" onSubmit={enviar} noValidate className={cartao}>
       <div className="flex items-center gap-3"><div className="rounded-lg bg-[#dff5e9] p-2 text-[#0b5d3b]"><User className="size-5" /></div><div><h2 className="font-semibold">Perfil</h2><p className="text-sm text-[#66736b]">Informações da sua conta</p></div></div>
       <div className="mt-6 flex items-center gap-4"><div aria-hidden="true" className="flex size-14 items-center justify-center rounded-full bg-[#dff5e9] text-xl font-semibold text-[#0b5d3b]">{(usuario.nome ?? '?').charAt(0).toUpperCase()}</div><div><p className="font-medium">{usuario.nome}</p><p className="text-xs text-[#66736b]">{usuario.perfil === 'ADMINISTRADOR' ? 'Administrador' : 'Agricultor'}</p></div></div>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -103,7 +103,7 @@ function Senha({ usuarioId }: { usuarioId?: number }) {
   }
   const erroGeral = alterar.error instanceof ApiError && alterar.error.status === 400 ? null : alterar.error
   return (
-    <form onSubmit={enviar} noValidate className={cartao}>
+    <form autoComplete="off" onSubmit={enviar} noValidate className={cartao}>
       <div className="flex items-center gap-3"><div className="rounded-lg bg-[#dff5e9] p-2 text-[#0b5d3b]"><Lock className="size-5" /></div><div><h2 className="font-semibold">Senha</h2><p className="text-sm text-[#66736b]">Altere a senha de acesso</p></div></div>
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Entrada id="senhaAtual" rotulo="Senha atual" type="password" autoComplete="current-password" value={atual} onChange={e => setAtual(e.target.value)} erro={erros.senhaAtual} />

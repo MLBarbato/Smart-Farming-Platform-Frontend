@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { sair, useSessao } from '@/lib/auth/sessao'
-import { AlertTriangle, Bell, CloudSun, Droplets, Gauge, Home, Leaf, Map, Menu, Settings, Sprout, Thermometer, X } from 'lucide-react'
+import { AlertTriangle, CloudSun, Droplets, Gauge, Home, Leaf, Map, Menu, Settings, Sprout, Thermometer, X } from 'lucide-react'
 
 const nav = [
   { label: 'Dashboard', href: '/dashboard', icon: Home },
@@ -52,7 +52,7 @@ export function DashboardShell({ title, subtitle, actions, children }: { title: 
       <section className="lg:pl-64">
         <header className="flex items-center justify-between gap-4 border-b border-[#dde5df] bg-white px-6 py-5 lg:px-10">
           <div className="pl-12 lg:pl-0"><h1 className="text-2xl font-semibold">{title}</h1><p className="text-sm text-[#66736b]">{subtitle}</p></div>
-          <div className="flex items-center gap-4">{actions}<button aria-label="Notificações" className="relative rounded-lg p-2 hover:bg-[#dff5e9]"><Bell className="size-5" /><span className="absolute right-1 top-1 size-2 rounded-full bg-[#dc2626]" /></button><div className="flex size-9 items-center justify-center rounded-full bg-[#dff5e9] font-semibold text-[#0b5d3b]" aria-hidden="true">{inicial}</div></div>
+          <div className="flex items-center gap-4">{actions}<div className="flex size-9 items-center justify-center rounded-full bg-[#dff5e9] font-semibold text-[#0b5d3b]" aria-hidden="true">{inicial}</div></div>
         </header>
         <div className="p-6 lg:p-10">{children}</div>
       </section>
